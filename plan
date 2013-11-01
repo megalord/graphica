@@ -1,0 +1,9 @@
+sampling
+*quantization
+filters
+intensity transformations:
+    log
+    u-law
+    piecewise linear
+salt & pepper noise
+addition/subraction
