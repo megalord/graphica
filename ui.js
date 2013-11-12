@@ -93,8 +93,49 @@
                     sigma = document.getElementById('sigma').value;
                 imp.gaussianNoise(mu, sigma);
                 break;
+            case 'filter':
+                var centerX = parseInt(document.getElementById('centerX').value),
+                    centerY = parseInt(document.getElementById('centerY').value),
+                    mask = JSON.parse(document.getElementById('mask').value),
+                    scale = parseInt(document.getElementById('scale').value);
+                // [[-1, 0], [0, 1]]
+                // [[-1, 2, -1], [0, 0, 0], [1, 2, 1]]
+                imp.filter(scale, mask, centerX, centerY);
+                break;
             case 'histogram':
                 imp.histogram();
+                break;
+            case 'inspect':
+                var cell, row,
+                    table = document.createElement('table'),
+                    tableBody = document.createElement('tbody');
+                imp.read();
+                imp.loopPixels(function(x, y, i) {
+                    if(x === imp.width - 1) {
+                        if(y < imp.height - 2) {
+                            tableBody.insertBefore(row, tableBody.firstChild);
+                        }else if(y === imp.height - 2) {
+                            tableBody.appendChild(row);
+                        };
+                        row = document.createElement('tr');
+                    };
+                    cell = document.createElement('td');
+                    cell.textContent = i;
+                    cell.title = x+', '+y;
+                    if(x === imp.width - 1) {
+                        row.appendChild(cell);
+                    }else{
+                        row.insertBefore(cell, row.firstChild);
+                    };
+                });
+                table.appendChild(tableBody);
+                table.id = 'frame' + nextFrameNumber;
+                table.className = 'frame';
+                nextFrameNumber++;
+                table.style.width = '300px';
+                table.style.height = '300px';
+                table.style.overflow = 'scroll';
+                frameContainer.appendChild(table);
                 break;
             case 'loadTestImage':
                 addBaseImage('cameraman.png');
@@ -113,7 +154,6 @@
     for(var i = 0, ilen = groups.length; i < ilen; i++) {
         groups[i].addEventListener('click', function(event) {
             var options = event.target.nextElementSibling;
-            console.log(options);
             if(options.className.indexOf('open') !== -1) {
                 removeClass(options, 'open');
             }else{

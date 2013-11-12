@@ -43,11 +43,28 @@
                         <label><input name="newFrame" type="radio" value="true" checked>create new frame</label>
                         <label><input name="newFrame" type="radio" value="false">replace frame</label>
                     </div>
+                </li>
+                <li>
+                    <div class="group">Filter</div>
+                    <div class="options">
+                        <label>Mask: <input id="mask" type="text" value="[[1, 0], [0, -1]]"></label>
+                        <label>Scale: <input id="scale" type="number" value="1"></label>
+                        <label>Center: <input id="centerX" type="number" value="0"><input id="centerY" type="number" value="0"></label>
+                        <span class="button" data-fn="filter">Filter</span>
+                    </div>
+                </li>
                 <li>
                     <div class="group">Histogram</div>
                     <div class="options">
                         <span class="button" data-fn="histogram">Histogram</span>
                     </div>
+                </li>
+                <li>
+                    <div class="group">Inspector</div>
+                    <div class="options">
+                        <span class="button" data-fn="inspect">Inspect Pixels</span>
+                    </div>
+                </li>
                 <li>
                     <div class="group">Noise</div>
                     <div class="options">

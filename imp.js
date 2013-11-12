@@ -16,7 +16,6 @@ var imp = {
                 height = this.height;
         };
         var x = width,
-            y = height-1,
             pixels = new Array(width);
         // begin by initializing the lengths of the arrays in both dimensions
         while(x--) {
@@ -25,28 +24,35 @@ var imp = {
         return pixels;
     },
 
+    // apply the provided filter to the image
     filter:function(scale, mask, centerX, centerY) {
-        var height = mask.length,
+        // maybe change dimensions... depends on input form
+        var z,
+            height = mask.length,
             width = mask[0].length;
+        this.read();
+        z = this.zeroPad(centerY, width - centerX - 1, height - centerY - 1, centerX);
         if(scale !== 1) {
-            if(scale.indexOf('/') !== -1) {
-                fractionParts = scale.split('/');
-                scale = Math.round(fractionParts[0]/fractionParts[1]);
-            };
-            for(var y = 0; y < height; y++) {
-                for(var x = 0; x < width; x++) {
-                    mask[x][y] = Math.round(scale*mask[x][y]);
+            if(scale % 1 !== 0) {
+                // scale is not an integer
+                if(scale.indexOf('/') !== -1) {
+                    fractionParts = scale.split('/');
+                    scale = Math.round(fractionParts[0]/fractionParts[1]);
+                }else if(scale.indexOf('.') !== -1) {
+                    // parse into float
                 };
             };
         };
-        loopPixels(function(x, y) {
+        this.loopPixels(function(x, y) {
             var sum = 0;
-            for(var y = 0; y < height; y++) {
-                for(var x = 0; x < width; x++) {
-                    sum += Math.round(scale*mask[x][y]);
+            for(var m = 0; m < height; m++) {
+                for(var n = 0; n < width; n++) {
+                    sum += z[x - centerX + n][y - centerY + m].r * mask[n][m];
                 };
             };
+            this.pixels[x][y] = this.greyToRGBA(Math.round(sum*scale));
         });
+        this.write();
     },
 
     // add gaussian noise based on given mu and sigma
@@ -60,6 +66,7 @@ var imp = {
         this.write();
     },
 
+    // turn a single intensity into a rgba object for use in a 2d pixel array
     greyToRGBA:function(i) {
         return {
             r:i,
@@ -69,17 +76,22 @@ var imp = {
         };
     },
 
+    // create a plot of the intensity distribution in the stored 2d pixel array
+    // not finished yet
     histogram:function() {
-        var dist = new Array(255);
+        var scale,
+            dist = new Array(256);
         for(var i = 0; i < 256; i++) {
             dist[i] = 0;
         };
         this.read();
-        this.loopPixels(function(x, y) {
-            dist[this.pixels[x][y].r]++;
+        this.loopPixels(function(x, y, i) {
+            dist[i]++;
         });
-        scale = 250/Math.max.apply({}, dist);
-        this.targetContext.clearRect(0, 0, 300, 300);
+        scale = 250/Math.max.apply({}, dist);   // why apply?
+        this.targetContext.canvas.width = this.width;
+        this.targetContext.canvas.height = this.height;
+        this.targetContext.clearRect(0, 0, this.width, this.height);
         this.targetContext.beginPath();
         for(var i = 0; i < 256; i++) {
             this.targetContext.moveTo(i+10, 275);
@@ -91,6 +103,8 @@ var imp = {
         this.targetContext.fillText('255', 250, 290);
     },
 
+    // generate boundaries and quantization points that are linearly spaced
+    // used solely by the quantize() method
     linearSpacing:function(levels) {
         var b = [0],
             q = [];
@@ -101,11 +115,13 @@ var imp = {
         return {b:b, q:q};
     },
 
+    // loops through each pixel in the object's 2d pixel array (this.pixels)
+    //   and executes the given function
     loopPixels:function(fn) {
-        var pix = this.width*this.height,
+        var n = this.width*this.height,
             x = this.width-1,
             y = this.height-1;
-        while(pix--) {
+        while(n--) {
             fn.call(this, x, y, this.pixels[x][y].r);
             if(x === 0) {
                 x = this.width-1;
@@ -124,6 +140,7 @@ var imp = {
         this.targetContext = targetContext;
     },
 
+    // quantize each pixel using the provided ranges and quantization values
     quantize:function(type, b, q) {
         // start by createing a quantizer 
         var j = 0,
@@ -155,17 +172,17 @@ var imp = {
             // detatch image data for better performance as per
             // www.onaluf.org/en/entry/13
             imageData = image.data,
-            pix = imageData.length,
+            n = imageData.length,
             x = this.width-1,
             y = this.height-1;
         this.pixels = this.create2dPixelArray();
-        while(pix) {
+        while(n) {
             // write the color data to the 2d array
             this.pixels[x][y] = {
-                a:imageData[--pix],
-                b:imageData[--pix],
-                g:imageData[--pix],
-                r:imageData[--pix]
+                a:imageData[--n],
+                b:imageData[--n],
+                g:imageData[--n],
+                r:imageData[--n]
             };
             if(x === 0) {
                 x = this.width-1;
@@ -176,6 +193,7 @@ var imp = {
         };
     },
 
+    // not finished yet
     sample:function(period) {
         if(this.width % period !== 0 || this.height % period !== 0) {
             return false;
@@ -225,5 +243,40 @@ var imp = {
         this.targetContext.canvas.width = this.width;
         this.targetContext.canvas.height = this.height;
         this.targetContext.putImageData(image, 0, 0);
+    },
+
+    // zero-pad the stored 2d pixel array
+    // not finished yet
+    zeroPad:function(top, right, bottom, left) {
+        var pixels = this.create2dPixelArray(),
+            width = this.width + left + right,
+            height = this.width + top + bottom,
+            arr = new Array(height);
+        // first create a deep clone of the 2d pixel array
+        this.loopPixels(function(x, y, i) {
+            pixels[x][y] = this.greyToRGBA(i);
+        });
+        // pad the 2d pixel array in the x-direction 
+        // for each value of x, pixels[x] is an array,
+        //   so an array of zeros with length equal to the height
+        for(var y = 0; y < height; y++) {
+            arr[y] = this.greyToRGBA(0);
+        };
+        for(var i = 0; i < left; i++) {
+            pixels.unshift(arr);   // .slice(0)??
+        };
+        for(var i = 0; i < right; i++) {
+            pixels.push(arr);
+        };
+        // pad the 2d pixel array in the y-direction 
+        for(var x = left, xlen = width - right; x < xlen; x++) {
+            for(var i = 0; i < top; i++) {
+                pixels[x].unshift(this.greyToRGBA(0));
+            };
+            for(var i = 0; i < bottom; i++) {
+                pixels[x].push(this.greyToRGBA(0));
+            };
+        };
+        return pixels;
     }
 };
