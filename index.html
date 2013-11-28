@@ -8,11 +8,14 @@
         body{margin:0px; font-family:'Baumans', cursive;}
         header{position:absolute; top:0px; left:0px; width:100%; text-align:center; font-size:30px; z-index:1;}
 
-        main{width:100%; height:calc(100% - 50px);}
+        main{width:100%; height:calc(100% - 20px);}
         main>section{display:inline-block; vertical-align:top;}
 
-        #images{width:80%; height:calc(100% - 40px); padding-top:40px; background-color:#f2f2f2;}
+        #images{width:80%; height:calc(100% - 40px); padding-top:40px; background-color:#f2f2f2; overflow-y:auto;}
         #images>*{width:300px; margin:10px; padding:10px; border:1px dotted #7852ff; display:inline-block; vertical-align:top;}
+        h4{margin-top:0px; position:relative;}
+        .frameButtons{position:absolute; top:0px; right:5px;}
+        .close:hover{cursor:pointer; color:red;}
 
         #toolbar{width:20%; height:100%; background-color:#4628b2; color:white; position:relative; z-index:2;}
         #toolbar>ul{margin:0px; padding:2px; list-style-type:none;}
@@ -21,12 +24,12 @@
         .options{max-height:0px; overflow:hidden; text-align:center; background-color:#7852ff; transition-property:all; transition-duration:0.5s; transition-timing-function:cubic-bezier(0, 1, 0.5, 1);}
         .options.open{max-height:300px; padding:10px 5px;}
         input[type="number"]{width:40px;}
-        .button{height:20px; margin-top:5px; padding:5px 8px; display:inline-block; text-shadow:0 1px rgba(0, 0, 0, 0.4); background-color:#2dcc33; border-radius:15px; box-shadow:0px 4px 0px 0px #1e8722;}
-        .button:hover{background-color:#2bc431;}
-        .button:active{margin-bottom:-1px; padding-top:6px; box-shadow:0px 1px 0px 0px #1e8722;}
-        #selectedFile{display:none;}
+        [data-fn]{height:20px; margin-top:5px; padding:5px 8px; display:inline-block; text-shadow:0 1px rgba(0, 0, 0, 0.4); background-color:#2dcc33; border-radius:15px; box-shadow:0px 4px 0px 0px #1e8722;}
+        [data-fn]:hover{cursor:pointer; background-color:#2bc431;}
+        [data-fn]:active{margin-bottom:-1px; padding-top:6px; box-shadow:0px 1px 0px 0px #1e8722;}
+        input[type="file"]{display:none;}
 
-        footer{width:100%; height:40px; padding-top:10px; color:#ffffff; text-align:center; background-color:#31b235;}
+        footer{width:100%; height:20px; color:#ffffff; text-align:center; background-color:#31b235;}
     </style>
 </head>
 <body>
@@ -38,61 +41,99 @@
      --><section id="toolbar">
             <ul>
                 <li>
-                    <div class="group">Mode</div>
-                    <div class="options">
-                        <label><input name="newFrame" type="radio" value="true" checked>create new frame</label>
-                        <label><input name="newFrame" type="radio" value="false">replace frame</label>
-                    </div>
-                </li>
-                <li>
                     <div class="group">Filter</div>
                     <div class="options">
-                        <label>Mask: <input id="mask" type="text" value="[[1, 0], [0, -1]]"></label>
-                        <label>Scale: <input id="scale" type="number" value="1"></label>
-                        <label>Center: <input id="centerX" type="number" value="0"><input id="centerY" type="number" value="0"></label>
-                        <span class="button" data-fn="filter">Filter</span>
+                        <form>
+                            <label>Mask: <input type="text" name="mask" value="[[1, 0], [0, -1]]"></label>
+                            <label>Scale: <input type="text" name="scale" value="1"></label>
+                            <label>Center: <input type="number" name="center-x" value="0">
+                                <input type="number" name="center-y" value="0">
+                            </label>
+                            <span data-fn="filter">Filter</span>
+                        </form>
+                        <form>
+                            <label>Size: <input type="number" name="size" value="3" min="3"></label>
+                            <span data-fn="median">Median</span>
+                        </form>
                     </div>
                 </li>
                 <li>
                     <div class="group">Histogram</div>
                     <div class="options">
-                        <span class="button" data-fn="histogram">Histogram</span>
+                        <span data-fn="histogram">Histogram</span></br>
+                        <span data-fn="histogramEq">Histogram Equalization*</span>
                     </div>
                 </li>
                 <li>
                     <div class="group">Inspector</div>
                     <div class="options">
-                        <span class="button" data-fn="inspect">Inspect Pixels</span>
+                        <span data-fn="inspect">Inspect Pixels</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="group">Intensity transforms</div>
+                    <div class="options">
+                        <span data-fn="negative">Negative</span>
+                        <form>
+                            <label>Threshold value: <input type="number" name="T" value="128"></label><br>
+                            <span data-fn="threshold">Threshold</span>
+                        </form>
+                        <form>
+                            <label>c: <input type="number" name="c" value="1"></label><br>
+                            <span data-fn="log">Log</span>
+                        </form>
+                        <form>
+                            <label>c: <input type="number" name="c" value="1"></label><br>
+                            <label>gamma: <input type="number" name="gamma" value="1"></label><br>
+                            <span data-fn="gamma">Gamma (Power-Law)</span>
+                        </form>
+                        <form>
+                            <span data-fn="piecewiseLinear">Piecewise Linear*</span>
+                        </form>
                     </div>
                 </li>
                 <li>
                     <div class="group">Noise</div>
                     <div class="options">
-                        Mean:<input id="mu" type="number" value="0">&nbsp;<br>
-                        Standard Deviation:<input id="sigma" type="number" value="1">&nbsp;
-                        <br><span class="button" data-fn="gaussianNoise">Gaussian</span>
+                        <form>
+                            <label>Salt: <input type="number" name="salt" value="0">%</label>
+                            <label>Pepper: <input type="number" name="pepper" value="0">%</label><br>
+                            <span data-fn="saltAndPepper">Salt & Pepper</span>
+                        </form>
+                        <form>
+                            <label>Mean: <input type="number" name="mean" value="0"></label>&nbsp;<br>
+                            <label>Standard Deviation: <input type="number" name="std" value="1"></label>&nbsp;<br>
+                            <span data-fn="gaussian">Gaussian</span>
+                        </form>
                     </div>
                 </li>
                 <li>
                     <div class="group">Quantize</div>
                     <div class="options">
-                        Levels:<input id="quantizeLevels" type="number" value="2" min="1" max="30">&nbsp;
-                        <br><span class="button" data-fn="quantize">Quantize</span>
+                        <form>
+                            <input type="hidden" name="type" value="linear">
+                            <label>Levels: <input type="number" name="levels" value="2" min="1" max="30"></label>&nbsp;<br>
+                            <span data-fn="quantize">Quantize</span>
+                        </form>
                     </div>
                 </li>
                 <li>
                     <div class="group">Upload new image</div>
                     <div class="options open">
-                        <input type="file" id="selectedFile">
-                        <span class="button" data-fn="loadUserImage">Upload an image</span>
-                        <span class="button" data-fn="loadTestImage">Use test image</span>
+                        <form>
+                            <input type="file">
+                            <span data-fn="loadUserImage">Upload an image</span>
+                        </form>
+                        <span data-fn="loadTestImage">Use test image</span>
                     </div>
                 </li>
             </ul>
         </section>
     </main>
     <footer>a html5 canvas experiment by Jordan Griege</footer>
-    <script src="imp.js"></script>
+    <script src="lib.js"></script>
     <script src="ui.js"></script>
+    <script src="imCanvas.js"></script>
+    <script src="imProcess.js"></script>
 </body>
 </html>

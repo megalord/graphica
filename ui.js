@@ -1,9 +1,9 @@
 (function() {
-    var fileInput = document.getElementById('selectedFile'),
+    var fileInput = document.querySelector('input[type="file"]'),
         frameContainer = document.getElementById('images'),
         groups = document.getElementsByClassName('group'),
         nextFrameNumber = 0,
-        toolbarButtons = document.querySelectorAll('#toolbar .button');
+        toolbarButtons = document.querySelectorAll('[data-fn]'),
 
     addBaseImage = function(src) {
         // create a new hidden img element and insert into container
@@ -29,23 +29,36 @@
         img.src = src;
     },
 
-    createFrame = function(headerText) {
+    createFrame = function(headerText, params) {
         var canvas = document.createElement('canvas'),
             close = document.createElement('span'),
             div = document.createElement('div'),
+            frameButtons = document.createElement('div'),
             header = document.createElement('h4'),
             radio = document.createElement('input'),
-            title = document.createElement('span');
+            title = document.createElement('span'),
+            keys = Object.keys(params || {}),
+            titleText = '';
         // write the header
-        title.textContent = '(' + nextFrameNumber + ') ' + headerText;
+        titleText = '(' + nextFrameNumber + ') ' + headerText;
+        if(keys.length !== 0) titleText += '<br>using ';
+        for(var i = 0; i < keys.length; i++) {
+            titleText += keys[i] + ': ' + params[keys[i]];
+            if(i !== keys.length - 1) titleText += ', ';
+        };
+        title.innerHTML = titleText;
         radio.name = 'sourceFrame';
         radio.type = 'radio';
-        radio.value = nextFrameNumber
+        radio.value = nextFrameNumber;
         radio.checked = true;
         close.textContent = 'x';
+        close.className = 'close';
+        close.addEventListener('click', removeFrame);
+        frameButtons.appendChild(radio);
+        frameButtons.appendChild(close);
+        frameButtons.className = 'frameButtons';
         header.appendChild(title);
-        header.appendChild(radio);
-        header.appendChild(close);
+        header.appendChild(frameButtons);
         // configure the canvas
         canvas.id = 'frame' + nextFrameNumber;
         canvas.className = 'frame';
@@ -67,87 +80,31 @@
         reader.readAsDataURL(file);
     },
     
-    removeClass = function(element, classToRemove) {
-        var classStr = element.className,
-            i = classStr.indexOf(classToRemove);
-        if(i !== -1) {
-            if(classStr.charAt(i-1) === ' ') {
-                i--;
-            };
-            element.className = classStr.slice(0, i) + classStr.slice(i + classToRemove.length+1);
+    toolbarButtonHandler = function(event) {
+        var fn = event.target.getAttribute('data-fn');
+        switch(fn) {
+            case 'loadTestImage':
+                addBaseImage('cameraman.png'); break;
+            case 'loadUserImage':
+                fileInput.click(); break;
+            case 'inspect':
+                var sourceFrameNumber = document.querySelector('input[name="sourceFrame"]:checked').value;
+                frameContainer.appendChild(imProcess.inspect(document.getElementById('frame'+sourceFrameNumber).getContext('2d')));
+                break;
+            default:
+                var formData = lib.serialize(event.target.parentElement),
+                    sourceFrameNumber = document.querySelector('input[name="sourceFrame"]:checked').value,
+                    sourceContext = document.getElementById('frame'+sourceFrameNumber).getContext('2d'),
+                    targetContext = createFrame(event.target.textContent + ' ' + sourceFrameNumber, formData);
+                imProcess.prepare(sourceContext, targetContext);
+                imProcess[fn].apply(imProcess, lib.values(formData));
         };
     },
 
-    toolbarButtonHandler = function(event) {
-        var fn = event.target.getAttribute('data-fn');
-        if(fn.slice(0, 4) !== 'load') {
-            var newFrame = document.querySelector('input[name="newFrame"]:checked').value,
-                sourceFrameNumber = document.querySelector('input[name="sourceFrame"]:checked').value,
-                sourceContext = document.getElementById('frame'+sourceFrameNumber).getContext('2d'),
-                targetContext = (newFrame === 'true') ? createFrame('quantization') : sourceContext;
-            imp.prepare(sourceContext, targetContext);
-        };
-        switch(fn) {
-            case 'gaussianNoise':
-                var mu = document.getElementById('mu').value,
-                    sigma = document.getElementById('sigma').value;
-                imp.gaussianNoise(mu, sigma);
-                break;
-            case 'filter':
-                var centerX = parseInt(document.getElementById('centerX').value),
-                    centerY = parseInt(document.getElementById('centerY').value),
-                    mask = JSON.parse(document.getElementById('mask').value),
-                    scale = parseInt(document.getElementById('scale').value);
-                // [[-1, 0], [0, 1]]
-                // [[-1, 2, -1], [0, 0, 0], [1, 2, 1]]
-                imp.filter(scale, mask, centerX, centerY);
-                break;
-            case 'histogram':
-                imp.histogram();
-                break;
-            case 'inspect':
-                var cell, row,
-                    table = document.createElement('table'),
-                    tableBody = document.createElement('tbody');
-                imp.read();
-                imp.loopPixels(function(x, y, i) {
-                    if(x === imp.width - 1) {
-                        if(y < imp.height - 2) {
-                            tableBody.insertBefore(row, tableBody.firstChild);
-                        }else if(y === imp.height - 2) {
-                            tableBody.appendChild(row);
-                        };
-                        row = document.createElement('tr');
-                    };
-                    cell = document.createElement('td');
-                    cell.textContent = i;
-                    cell.title = x+', '+y;
-                    if(x === imp.width - 1) {
-                        row.appendChild(cell);
-                    }else{
-                        row.insertBefore(cell, row.firstChild);
-                    };
-                });
-                table.appendChild(tableBody);
-                table.id = 'frame' + nextFrameNumber;
-                table.className = 'frame';
-                nextFrameNumber++;
-                table.style.width = '300px';
-                table.style.height = '300px';
-                table.style.overflow = 'scroll';
-                frameContainer.appendChild(table);
-                break;
-            case 'loadTestImage':
-                addBaseImage('cameraman.png');
-                break;
-            case 'loadUserImage':
-                fileInput.click();
-                break;
-            case 'quantize':
-                var levels = document.getElementById('quantizeLevels').value;
-                imp.quantize('linear', levels);
-                break;
-        };
+    removeFrame = function(event) {
+        var frameElement = event.target.parentElement.parentElement;
+        frameElement.previousSibling.querySelector('input[name="sourceFrame"]').checked = true;
+        frameContainer.removeChild(frameElement);
     };
 
     // add click event listeners for toolbar navigation
@@ -155,11 +112,11 @@
         groups[i].addEventListener('click', function(event) {
             var options = event.target.nextElementSibling;
             if(options.className.indexOf('open') !== -1) {
-                removeClass(options, 'open');
+                lib.removeClass(options, 'open');
             }else{
                 var open = document.getElementsByClassName('open')[0];
                 if(typeof open !== 'undefined') {
-                    removeClass(open, 'open');
+                    lib.removeClass(open, 'open');
                 };
                 options.className += ' open';
             };
@@ -170,7 +127,4 @@
     for(var i = 0, ilen = toolbarButtons.length; i < ilen; i++) {
         toolbarButtons[i].addEventListener('click', toolbarButtonHandler);
     };
-
-    // add change event listener for file upload input
-    fileInput.addEventListener('change', loadImage);
 }());
