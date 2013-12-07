@@ -6,20 +6,21 @@
     <link href="http://fonts.googleapis.com/css?family=Baumans" rel="stylesheet" type="text/css">
     <style>
         html, body{height:100%;}
-        body{margin:0px; font-family:'Baumans', cursive; position:relative;}
-        header{position:absolute; top:0px; left:0px; width:100%; text-align:center; font-size:30px; z-index:1;}
+        body{margin:0px; font-family:'Baumans', cursive;}
 
         main{width:100%; height:calc(100% - 20px);}
         main>section{display:inline-block; vertical-align:top;}
 
-        #images{width:80%; height:calc(100% - 40px); padding-top:40px; background-color:#f2f2f2; overflow-y:auto;}
+        #images{width:80%; height:calc(100% - 40px); background-color:#f2f2f2; overflow-y:auto;}
         #images>*{width:300px; margin:10px; padding:10px; border:1px dotted #7852ff; display:inline-block; vertical-align:top;}
         h4{margin-top:0px; position:relative;}
         .frameButtons{position:absolute; top:0px; right:5px;}
         .close:hover{cursor:pointer; color:red;}
 
-        #toolbar{width:20%; height:100%; background-color:#4628b2; color:white; position:relative; z-index:2;}
+        #toolbar{width:20%; height:100%; background-color:#4628b2; color:white; overflow:hidden;}
+        #toolbar h1{width:100%; margin:0px; text-align:center; font-size:30px; font-weight:normal;}
         #toolbar>ul{margin:0px; padding:2px; list-style-type:none;}
+        #toolbar li:first-child{margin-bottom:20px;}
         .group{padding:3px 5px;}
         .group:hover{cursor:pointer;}
         .options{max-height:0px; overflow:hidden; text-align:center; background-color:#7852ff; transition-property:all; transition-duration:0.5s; transition-timing-function:cubic-bezier(0, 1, 0.5, 1);}
@@ -34,12 +35,12 @@
     </style>
 </head>
 <body>
-    <header>Interactive Image Processing</header>
     <main>
         <section id="images">
         </section><!--
         remove whitespace
      --><section id="toolbar">
+            <h1>Interactive Image Processing</h1>
             <ul>
                 <li>
                     <div class="group">File</div>
@@ -53,6 +54,16 @@
                         <form>
                             <input id="jsonFile" type="file">
                             <span data-fn="openPage">Open page</span>
+                        </form>
+                    </div>
+                </li>
+                <li>
+                    <div class="group">Color scheme conversion</div>
+                    <div class="options">
+                        <span data-fn="grayscale">Grayscale</span>
+                        <form>
+                            <label>Threshold value: <input type="number" name="T" value="128"></label><br>
+                            <span data-fn="threshold">Threshold</span>
                         </form>
                     </div>
                 </li>
@@ -97,20 +108,28 @@
                     <div class="options">
                         <span data-fn="negative">Negative</span>
                         <form>
-                            <label>Threshold value: <input type="number" name="T" value="128"></label><br>
-                            <span data-fn="threshold">Threshold</span>
-                        </form>
-                        <form>
                             <label>c: <input type="number" name="c" value="1"></label><br>
                             <span data-fn="log">Log</span>
                         </form>
                         <form>
-                            <label>c: <input type="number" name="c" value="1"></label><br>
+                            <label>c: <input type="number" name="c" value="1"></label>
                             <label>gamma: <input type="number" name="gamma" value="1"></label><br>
                             <span data-fn="gamma">Gamma (Power-Law)</span>
                         </form>
                         <form>
                             <span data-fn="piecewiseLinear">Piecewise Linear*</span>
+                        </form>
+                    </div>
+                </li>
+                <li>
+                    <div class="group">Morphology</div>
+                    <div class="options">
+                        <form>
+                            <label>Structuring element: <input type="text" name="SE" value="[[0, 1, 0], [1, 1, 1], [0, 1, 0]]"></label>
+                            <span data-fn="erode">Erode</span>
+                            <span data-fn="dilate">Dilate</span>
+                            <span data-fn="open">Open</span>
+                            <span data-fn="close">Close</span>
                         </form>
                     </div>
                 </li>

@@ -135,7 +135,7 @@
                 var formData = helper.serialize(event.target.parentElement),
                     sourceFrameNumber = document.querySelector('input[name="sourceFrame"]:checked').value,
                     sourceContext = document.getElementById('frame'+sourceFrameNumber).getContext('2d'),
-                    targetContext = createFrame(prompt('Please enter the title for the frame.'), formData);
+                    targetContext = createFrame(prompt('Please enter the title for the frame.', event.target.textContent), formData);
                 imProcess.prepare(sourceContext, targetContext);
                 imProcess[fn].apply(imProcess, helper.values(formData));
         };

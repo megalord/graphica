@@ -3,63 +3,66 @@ var imProcess = {
     /*
      *  a library of functions used for processing images
      *  that are drawn using the html5 canvas element
+     *
+     *  dependent on the imCanvas utility library
      */
 
-    fft2d:function() {
-        // for HTML5 Canvas
-        var spectrum = document.querySelector('#Spectrum').getContext('2d'),
-            result = document.querySelector('#Result').getContext('2d'),
-            image = new Image();
-        image.src = '/path/to/image';
-        image.addEventListener('load', function(e) {
-          var w = image.width,
-              h = image.height, // w == h
-              re = [],
-              im = [];
+    close:function(se) {
+        this.erode(se);
+        this.sourceContext = this.targetContext;
+        this.dilate(se);
+    },
 
-          // initialize, radix-2 required
-          FFT.init(w);
-          FrequencyFilter.init(w);
-          SpectrumViewer.init(spectrum);
-          spectrum.drawImage(image, 0, 0);
-          var src = spectrum.getImageData(0, 0, w, h),
-              data = src.data,
-              radius = 30,
-              i, val, p;
-          for(var y=0; y<h; y++) {
-            i = y*w;
-            for(var x=0; x<w; x++) {
-              re[i + x] = data[(i << 2) + (x << 2)];
-              im[i + x] = 0.0;
-            }
-          }
-          // 2D-FFT
-          FFT.fft2d(re, im);
-          // swap quadrant
-          FrequencyFilter.swap(re, im);
-          // High Pass Filter
-          FrequencyFilter.HPF(re, im, radius);
-          // Low Pass Filter
-          FrequencyFilter.LPF(re, im, radius);
-          // Band Path Filter
-          FrequencyFilter.BPF(re, im, radius, radius/2);
-          // render spectrum
-          SpectrumViewer.render(re, im);
-          // swap quadrant
-          FrequencyFilter.swap(re, im);
-          // 2D-IFFT
-          FFT.ifft2d(re, im);
-          for(var y=0; y<h; y++) {
-            i = y*w;
-            for(var x=0; x<w; x++) {
-              val = re[i + x];
-              p = (i << 2) + (x << 2);
-              data[p] = data[p + 1] = data[p + 2] = val;
-            }
-          }
-          // put result image on the canvas
-          result.putImageData(src, 0, 0);
-        }, false);
+    // dilate using the structuring element
+    dilate:function(se) {
+        // setup variables
+        var pixels, z, width, height;
+        se = JSON.parse(se);
+        height = se.length;
+        width = se[0].length;
+        imCanvas.read(this.sourceContext);
+        pixels = imCanvas.create2dPixelArray(0);
+
+        imCanvas.loopPixels(function(x, y, i) {
+            if(i === 255) {
+                for(var m = 0; m < height; m++) {
+                    for(var n = 0; n < width; n++) {
+                        if(pixels[x + n] && typeof pixels[x + n][y + m] === 'number') pixels[x + n][y + m] = 255;
+                    };
+                };
+            };
+        });
+        imCanvas.pixels = pixels;
+        imCanvas.write(this.targetContext);
+    },
+
+    erode:function(se) {
+        // setup variables
+        var pixels, z, width, height, padX, padY;
+        se = JSON.parse(se);
+        height = se.length;
+        width = se[0].length;
+        imCanvas.read(this.sourceContext);
+        pixels = imCanvas.create2dPixelArray();
+        padX = Math.floor(width/2);
+        padY = Math.floor(height/2);
+
+        // erode using the structuring element
+        imCanvas.loopPixels(function(x, y) {
+            var hit = true;
+            outer:for(var m = 0; m < height; m++) {
+                for(var n = 0; n < width; n++) {
+                    if(se[m][n] === 1 && (this.pixels[x + n] && typeof this.pixels[x + n][y + m] === 'number'
+                      && this.pixels[x + n][y + m] !== 255)) {
+                        hit = false;
+                        break outer;
+                    };
+                };
+            };
+            pixels[x][y] = hit ? 255 : 0;
+        });
+        imCanvas.pixels = pixels;
+        imCanvas.write(this.targetContext);
     },
 
     // apply the provided filter to the image
@@ -105,6 +108,12 @@ var imProcess = {
         imCanvas.loopPixels(function(x, y, i) {
             this.pixels[x][y] = i + Math.round((2*(Math.random()+Math.random()+Math.random())-3) * sigma + mu);
         });
+        imCanvas.write(this.targetContext);
+    },
+
+    // convert a color image to greyscale
+    grayscale:function() {
+        imCanvas.readColor(this.sourceContext);
         imCanvas.write(this.targetContext);
     },
 
@@ -220,6 +229,12 @@ var imProcess = {
             this.pixels[x][y] = Math.round(c*Math.log(1+i)/Math.log(10));
         });
         imCanvas.write(this.targetContext);
+    },
+
+    open:function(se) {
+        this.dilate(se);
+        this.sourceContext = this.targetContext;
+        this.erode(se);
     },
 
     // apply a mean filter to the image
@@ -344,7 +359,7 @@ var imProcess = {
             };
         });
         //this.pixels = pixels;
-        this.setDimensions(this.width/period, this.height/period);
+        //this.setDimensions(this.width/period, this.height/period);
         imCanvas.write(this.targetContext);
     },
 
@@ -360,38 +375,13 @@ var imProcess = {
     // zero-pad the stored 2d pixel array
     // not finished yet
     zeroPad:function(top, right, bottom, left) {
-        console.log(top, right, bottom, left);
-        var pixels = imCanvas.create2dPixelArray(),
-            width = imCanvas.width + left + right,
-            arr = new Array(imCanvas.height);
+        var pixels = imCanvas.create2dPixelArray(imCanvas.width + right + left, imCanvas.height + top + bottom, 0);
 
-        // first create a deep clone of the 2d pixel array
+        // clone the image onto a portion of the new 2d pixel array
         imCanvas.loopPixels(function(x, y, i) {
-            pixels[x][y] = i;
+            pixels[x + left][y + top] = i;
         });
 
-        // pad the 2d pixel array in the x-direction 
-        // for each value of x, pixels[x] is an array,
-        //   so an array of zeros with length equal to the height
-        for(var y = 0; y < imCanvas.height; y++) {
-            arr[y] = 0;
-        };
-        for(var i = 0; i < left; i++) {
-            pixels.unshift(arr);
-        };
-        for(var i = 0; i < right; i++) {
-            pixels.push(arr);
-        };
-
-        // pad the 2d pixel array in the y-direction 
-        for(var x = 0; x < width; x++) {
-            for(var i = 0; i < top; i++) {
-                pixels[x].unshift(0);
-            };
-            for(var i = 0; i < bottom; i++) {
-                pixels[x].push(0);
-            };
-        };
         return pixels;
     }
 
