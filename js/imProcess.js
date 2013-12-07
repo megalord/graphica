@@ -5,6 +5,63 @@ var imProcess = {
      *  that are drawn using the html5 canvas element
      */
 
+    fft2d:function() {
+        // for HTML5 Canvas
+        var spectrum = document.querySelector('#Spectrum').getContext('2d'),
+            result = document.querySelector('#Result').getContext('2d'),
+            image = new Image();
+        image.src = '/path/to/image';
+        image.addEventListener('load', function(e) {
+          var w = image.width,
+              h = image.height, // w == h
+              re = [],
+              im = [];
+
+          // initialize, radix-2 required
+          FFT.init(w);
+          FrequencyFilter.init(w);
+          SpectrumViewer.init(spectrum);
+          spectrum.drawImage(image, 0, 0);
+          var src = spectrum.getImageData(0, 0, w, h),
+              data = src.data,
+              radius = 30,
+              i, val, p;
+          for(var y=0; y<h; y++) {
+            i = y*w;
+            for(var x=0; x<w; x++) {
+              re[i + x] = data[(i << 2) + (x << 2)];
+              im[i + x] = 0.0;
+            }
+          }
+          // 2D-FFT
+          FFT.fft2d(re, im);
+          // swap quadrant
+          FrequencyFilter.swap(re, im);
+          // High Pass Filter
+          FrequencyFilter.HPF(re, im, radius);
+          // Low Pass Filter
+          FrequencyFilter.LPF(re, im, radius);
+          // Band Path Filter
+          FrequencyFilter.BPF(re, im, radius, radius/2);
+          // render spectrum
+          SpectrumViewer.render(re, im);
+          // swap quadrant
+          FrequencyFilter.swap(re, im);
+          // 2D-IFFT
+          FFT.ifft2d(re, im);
+          for(var y=0; y<h; y++) {
+            i = y*w;
+            for(var x=0; x<w; x++) {
+              val = re[i + x];
+              p = (i << 2) + (x << 2);
+              data[p] = data[p + 1] = data[p + 2] = val;
+            }
+          }
+          // put result image on the canvas
+          result.putImageData(src, 0, 0);
+        }, false);
+    },
+
     // apply the provided filter to the image
     filter:function(mask, scale, centerX, centerY) {
         // maybe change dimensions... depends on input form
@@ -16,17 +73,6 @@ var imProcess = {
         imCanvas.read(this.sourceContext);
         pixels = imCanvas.create2dPixelArray();
         z = this.zeroPad(centerY, width - centerX - 1, height - centerY - 1, centerX);
-
-        // parse the scale
-        if(scale.indexOf('/') !== -1) {
-            fractionParts = scale.split('/');
-            scale = Math.round(100*fractionParts[0]/fractionParts[1])/100;
-        }else if(scale.indexOf('.') !== -1) {
-            scale = parseFloat(scale);
-        }else{
-            scale = parseInt(scale);
-        };
-        console.log(scale);
 
         // apply the filter
         imCanvas.loopPixels(function(x, y) {
@@ -67,9 +113,7 @@ var imProcess = {
     histogram:function() {
         var scale,
             dist = new Array(256);
-        for(var i = 0; i < 256; i++) {
-            dist[i] = 0;
-        };
+        for(var i = 0; i < 256; i++) dist[i] = 0;
         imCanvas.read(this.sourceContext);
         imCanvas.loopPixels(function(x, y, i) {
             dist[i]++;
@@ -90,10 +134,37 @@ var imProcess = {
         this.targetContext.fillText('255', 250, 290);
     },
 
-    // not finshed yet
+    // equalize the distribution of intensities
+    // using the histogram equalization method
+    // pr(r[k]) = n[k]/n
+    // s[k] = (L-1)*sum(pr(r[j]), j, 0, k)
     histogramEq:function() {
-        // pr(rk) = nk/n
-        // sk = (L-1)*sum(pr(rj), j, 0, k)
+        var totalPixels,
+            pr = new Array(255),
+            s = new Array(255),
+            sum = 0;
+
+        // start with an array of zeros
+        for(var i = 0; i < 256; i++) pr[i] = 0;
+
+        // count all the values
+        imCanvas.read(this.sourceContext);
+        imCanvas.loopPixels(function(x, y, i) {
+            pr[i]++;
+        });
+
+        // create a map of old intensities to new ones
+        totalPixels = imCanvas.width * imCanvas.height;
+        for(var i = 0; i < 256; i++) {
+            sum += pr[i]/totalPixels;
+            s[i] = Math.round(255*sum);
+        };
+
+        // apply the created intensity map
+        imCanvas.loopPixels(function(x, y, i) {
+            this.pixels[x][y] = s[i];
+        });
+        imCanvas.write(this.targetContext);
     },
 
     // create a tabular representation of the 2d pixel array
@@ -289,19 +360,20 @@ var imProcess = {
     // zero-pad the stored 2d pixel array
     // not finished yet
     zeroPad:function(top, right, bottom, left) {
+        console.log(top, right, bottom, left);
         var pixels = imCanvas.create2dPixelArray(),
             width = imCanvas.width + left + right,
-            height = imCanvas.width + top + bottom,
-            arr = new Array(height);
+            arr = new Array(imCanvas.height);
+
         // first create a deep clone of the 2d pixel array
         imCanvas.loopPixels(function(x, y, i) {
             pixels[x][y] = i;
         });
-        console.log(pixels);
+
         // pad the 2d pixel array in the x-direction 
         // for each value of x, pixels[x] is an array,
         //   so an array of zeros with length equal to the height
-        for(var y = 0; y < height; y++) {
+        for(var y = 0; y < imCanvas.height; y++) {
             arr[y] = 0;
         };
         for(var i = 0; i < left; i++) {
@@ -310,8 +382,9 @@ var imProcess = {
         for(var i = 0; i < right; i++) {
             pixels.push(arr);
         };
+
         // pad the 2d pixel array in the y-direction 
-        for(var x = left, xlen = width - right; x < xlen; x++) {
+        for(var x = 0; x < width; x++) {
             for(var i = 0; i < top; i++) {
                 pixels[x].unshift(0);
             };

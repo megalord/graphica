@@ -1,17 +1,18 @@
 (function() {
-    var fileInput = document.querySelector('input[type="file"]'),
-        frameContainer = document.getElementById('images'),
+    var frameContainer = document.getElementById('images'),
         groups = document.getElementsByClassName('group'),
+        imageFileInput = document.getElementById('imageFile'),
+        jsonFileInput = document.getElementById('jsonFile'),
         nextFrameNumber = 0,
         toolbarButtons = document.querySelectorAll('[data-fn]'),
 
-    addBaseImage = function(src) {
+    addImage = function(src, headerText) {
         // create a new hidden img element and insert into container
         var img = document.createElement('img');
         img.style.display = 'none';
         img.onload = function() {
             // create a new canvas element and insert into container
-            var context = createFrame('source image'),
+            var context = createFrame(headerText || 'source image'),
                 width = img.width,
                 height = img.height;
             // for better visibility, scale large images to 300x300
@@ -75,35 +76,76 @@
         var file = event.target.files[0],
             reader = new FileReader();
         reader.onload = function() {
-            addBaseImage(reader.result);
+            addImage(reader.result);
         };
         reader.readAsDataURL(file);
     },
-    
+
+    loadPage = function(event) {
+        // read the file that was chosen
+        var frameData,
+            file = event.target.files[0],
+            reader = new FileReader();
+        reader.onload = function() {
+            frameData = JSON.parse(reader.result);
+            for(var i = 0; i < frameData.length; i++) {
+                addImage(frameData[i].url, frameData[i].text);
+            };
+        };
+        reader.readAsText(file);
+    },
+
+    savePage = function() {
+        var frameData = [],
+            frames = frameContainer.children,
+            link = document.createElement('a');
+
+        // get all the images as data urls
+        for(var i = 0; i < frames.length; i++) {
+            frameData[i] = {
+                url:frames[i].lastChild.toDataURL('image/png'),
+                text:frames[i].firstChild.firstChild.textContent.slice(4)
+            };
+        };
+
+        // create a download link for the json file
+        link.href = 'data:text/plain;,' + JSON.stringify(frameData);
+        link.target = '_blank';
+        link.download = 'myProcessedImages.json';
+        link.style.display = 'none';
+
+        // insert the link into the document so that it is clickable
+        frameContainer.appendChild(link);
+        link.click();
+        frameContainer.removeChild(link);
+    },
+
     toolbarButtonHandler = function(event) {
         var fn = event.target.getAttribute('data-fn');
         switch(fn) {
-            case 'loadTestImage':
-                addBaseImage('cameraman.png'); break;
-            case 'loadUserImage':
-                fileInput.click(); break;
+            case 'loadTestImage':addImage('cameraman.png'); break;
+            case 'loadUserImage':imageFileInput.click(); break;
+            case 'savePage':savePage(); break;
+            case 'openPage':jsonFileInput.click(); break;
             case 'inspect':
                 var sourceFrameNumber = document.querySelector('input[name="sourceFrame"]:checked').value;
                 frameContainer.appendChild(imProcess.inspect(document.getElementById('frame'+sourceFrameNumber).getContext('2d')));
                 break;
             default:
-                var formData = lib.serialize(event.target.parentElement),
+                var formData = helper.serialize(event.target.parentElement),
                     sourceFrameNumber = document.querySelector('input[name="sourceFrame"]:checked').value,
                     sourceContext = document.getElementById('frame'+sourceFrameNumber).getContext('2d'),
-                    targetContext = createFrame(event.target.textContent + ' ' + sourceFrameNumber, formData);
+                    targetContext = createFrame(prompt('Please enter the title for the frame.'), formData);
                 imProcess.prepare(sourceContext, targetContext);
-                imProcess[fn].apply(imProcess, lib.values(formData));
+                imProcess[fn].apply(imProcess, helper.values(formData));
         };
     },
 
     removeFrame = function(event) {
-        var frameElement = event.target.parentElement.parentElement;
-        frameElement.previousSibling.querySelector('input[name="sourceFrame"]').checked = true;
+        var frameElement = event.target.parentElement.parentElement.parentElement;
+        if(event.target.previousSibling.checked && frameElement.previousElementSibling) {
+            frameElement.previousElementSibling.querySelector('input[name="sourceFrame"]').checked = true;
+        };
         frameContainer.removeChild(frameElement);
     };
 
@@ -112,11 +154,11 @@
         groups[i].addEventListener('click', function(event) {
             var options = event.target.nextElementSibling;
             if(options.className.indexOf('open') !== -1) {
-                lib.removeClass(options, 'open');
+                helper.removeClass(options, 'open');
             }else{
                 var open = document.getElementsByClassName('open')[0];
                 if(typeof open !== 'undefined') {
-                    lib.removeClass(open, 'open');
+                    helper.removeClass(open, 'open');
                 };
                 options.className += ' open';
             };
@@ -127,4 +169,9 @@
     for(var i = 0, ilen = toolbarButtons.length; i < ilen; i++) {
         toolbarButtons[i].addEventListener('click', toolbarButtonHandler);
     };
+
+    // add change event listeners for file inputs
+    imageFileInput.addEventListener('change', loadImage);
+    jsonFileInput.addEventListener('change', loadPage);
+    addImage('cameraman.png');
 }());

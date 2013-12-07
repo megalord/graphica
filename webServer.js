@@ -39,4 +39,4 @@ var fs = require('fs'),
         });
     }).listen(port);
     console.log('Listening to port %d.', port);
-}('/home/jordan/webdev/graphica', 3000));
+}(__dirname, 3000));

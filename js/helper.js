@@ -1,4 +1,4 @@
-var lib = {
+var helper = {
 
     addClass:function(element, classToAdd) {
         element.className += (element.className !== '' ? '' : ' ') + classToAdd;
@@ -29,9 +29,11 @@ var lib = {
             value = elements[i].value;
             switch(elements[i].type) {
                 case 'button': break;
-                case 'number': formData[name] = parseInt(value); break;
+                case 'number': formData[name] = parseInt(value); console.log('parsing'); break;
                 case 'radio': if(elements[i].checked) formData[name] = value; break;
-                default: formData[name] = value;
+                default: 
+                    if(!isNaN(value)) value = (value.indexOf('.') === -1) ? parseInt(value) : parseFloat(value);
+                    formData[name] = value;
             };
         };
         return formData;
