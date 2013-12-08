@@ -136,10 +136,9 @@ var imProcess = {
             dist[i]++;
         });
         scale = 250/Math.max.apply({}, dist);
-        this.width = 300; this.height = 300;
-        this.targetContext.canvas.width = this.width;
-        this.targetContext.canvas.height = this.height;
-        this.targetContext.clearRect(0, 0, this.width, this.height);
+        this.targetContext.canvas.width = 300;
+        this.targetContext.canvas.height = 300;
+        this.targetContext.clearRect(0, 0, 300, 300);
         this.targetContext.beginPath();
         for(var i = 0; i < 256; i++) {
             this.targetContext.moveTo(i+10, 275);
