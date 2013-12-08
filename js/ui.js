@@ -71,6 +71,22 @@
         return canvas.getContext('2d');
     },
 
+    help = function() {
+        var popup,
+        str = [
+            'Welcome to the Interactive Image Processing application!<br><br>',
+            'You can begin with a test image or uploading one of your own, ',
+            'both of which can be done using the menu that is already open.<br><br>',
+            'The toolbar on the right allows you to select processes to apply to an image. ',
+            'The chosen process will be applied to the active frame, ',
+            'which is delineated by the radio button in each frame\'s upper-right corner. ',
+            'Frames can be deleted by clicking the x that is right next to the radio button.<br><br>',
+            'Also, you can save your work as a .json file and reopen it at any time.<br><br>',
+            'Thanks for visiting!'
+        ].join('');
+        popup = window.open('data:text/html;,'+str, 'help', 'width=400,height=500');
+    },
+
     loadImage = function(event) {
         // read the file that was chosen
         var file = event.target.files[0],
@@ -123,10 +139,11 @@
     toolbarButtonHandler = function(event) {
         var fn = event.target.getAttribute('data-fn');
         switch(fn) {
-            case 'loadTestImage':addImage('cameraman.png'); break;
+            case 'loadTestImage':addImage('fullmetal.png'); break;
             case 'loadUserImage':imageFileInput.click(); break;
             case 'savePage':savePage(); break;
             case 'openPage':jsonFileInput.click(); break;
+            case 'help':help(); break;
             case 'inspect':
                 var sourceFrameNumber = document.querySelector('input[name="sourceFrame"]:checked').value;
                 frameContainer.appendChild(imProcess.inspect(document.getElementById('frame'+sourceFrameNumber).getContext('2d')));
@@ -173,5 +190,4 @@
     // add change event listeners for file inputs
     imageFileInput.addEventListener('change', loadImage);
     jsonFileInput.addEventListener('change', loadPage);
-    addImage('cameraman.png');
 }());

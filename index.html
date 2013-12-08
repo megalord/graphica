@@ -11,25 +11,28 @@
         main{width:100%; height:calc(100% - 20px);}
         main>section{display:inline-block; vertical-align:top;}
 
-        #images{width:80%; height:calc(100% - 40px); background-color:#f2f2f2; overflow-y:auto;}
+        #images{width:80%; height:100%; background-color:#f2f2f2; overflow-y:auto;}
         #images>*{width:300px; margin:10px; padding:10px; border:1px dotted #7852ff; display:inline-block; vertical-align:top;}
         h4{margin-top:0px; position:relative;}
         .frameButtons{position:absolute; top:0px; right:5px;}
         .close:hover{cursor:pointer; color:red;}
 
-        #toolbar{width:20%; height:100%; background-color:#4628b2; color:white; overflow:hidden;}
+        #toolbar{width:20%; height:100%; background-color:#4628b2; color:white; overflow-y:auto;}
         #toolbar h1{width:100%; margin:0px; text-align:center; font-size:30px; font-weight:normal;}
         #toolbar>ul{margin:0px; padding:2px; list-style-type:none;}
         #toolbar li:first-child{margin-bottom:20px;}
         .group{padding:3px 5px;}
         .group:hover{cursor:pointer;}
         .options{max-height:0px; overflow:hidden; text-align:center; background-color:#7852ff; transition-property:all; transition-duration:0.5s; transition-timing-function:cubic-bezier(0, 1, 0.5, 1);}
-        .options.open{max-height:300px; padding:10px 5px;}
+        .options.open{max-height:400px; padding:10px 5px;}
+        label{white-space:nowrap;}
         input[type="number"]{width:40px;}
         [data-fn]{height:20px; margin:5px 0px; padding:5px 8px; display:inline-block; text-shadow:0 1px rgba(0, 0, 0, 0.4); background-color:#2dcc33; border-radius:15px; box-shadow:0px 4px 0px 0px #1e8722;}
         [data-fn]:hover{cursor:pointer; background-color:#2bc431;}
         [data-fn]:active{margin-bottom:-1px; padding-top:6px; box-shadow:0px 1px 0px 0px #1e8722;}
         input[type="file"]{display:none;}
+        .divider{height:0px; margin-top: 5px; padding-top:5px; border-top:1px dotted white;}
+        #helpContainer{margin-top:20px; margin-bottom:10px; text-align:center;}
 
         footer{width:100%; height:20px; color:#ffffff; text-align:center; background-color:#31b235;}
     </style>
@@ -58,9 +61,10 @@
                     </div>
                 </li>
                 <li>
-                    <div class="group">Color scheme conversion</div>
+                    <div class="group">Black/White and Grayscale</div>
                     <div class="options">
-                        <span data-fn="grayscale">Grayscale</span>
+                        <span data-fn="grayscale">Color to grayscale</span>
+                        <div class="divider"></div>
                         <form>
                             <label>Threshold value: <input type="number" name="T" value="128"></label><br>
                             <span data-fn="threshold">Threshold</span>
@@ -71,23 +75,18 @@
                     <div class="group">Filter</div>
                     <div class="options">
                         <form>
-                            <label>Mask: <input type="text" name="mask" value="[[1, 0], [0, -1]]"></label>
-                            <label>Scale: <input type="text" name="scale" value="1"></label>
+                            <label>Mask: <br><input type="text" name="mask" value="[[1, 0], [0, -1]]"></label>
+                            <label>Scale: <input type="number" name="scale" value="1"></label>
                             <label>Center: <input type="number" name="center-x" value="0">
                                 <input type="number" name="center-y" value="0">
                             </label>
                             <span data-fn="filter">Filter</span>
                         </form>
+                        <div class="divider"></div>
                         <form>
                             <label>Size: <input type="number" name="size" value="3" min="3"></label>
                             <span data-fn="median">Median</span>
                         </form>
-                    </div>
-                </li>
-                <li>
-                    <div class="group">Frequency</div>
-                    <div class="options">
-                        <span data-fn="fft2d">fft2d</span>
                     </div>
                 </li>
                 <li>
@@ -100,6 +99,7 @@
                 <li>
                     <div class="group">Inspector</div>
                     <div class="options">
+                        <div>**Warning: can crash the window on slower computers, and usually takes several seconds on others.</div>
                         <span data-fn="inspect">Inspect Pixels</span>
                     </div>
                 </li>
@@ -107,17 +107,24 @@
                     <div class="group">Intensity transforms</div>
                     <div class="options">
                         <span data-fn="negative">Negative</span>
-                        <form>
-                            <label>c: <input type="number" name="c" value="1"></label><br>
-                            <span data-fn="log">Log</span>
-                        </form>
+                        <div class="divider"></div>
                         <form>
                             <label>c: <input type="number" name="c" value="1"></label>
-                            <label>gamma: <input type="number" name="gamma" value="1"></label><br>
+                            <span data-fn="log">Log</span>
+                        </form>
+                        <div class="divider"></div>
+                        <form>
+                            <label>c: <input type="number" name="c" value="1"></label>
+                            <label>gamma: <input type="number" name="gamma" value="1"></label>
                             <span data-fn="gamma">Gamma (Power-Law)</span>
                         </form>
+                        <div class="divider"></div>
                         <form>
-                            <span data-fn="piecewiseLinear">Piecewise Linear*</span>
+                            <label>r1: <input type="number" name="r1" value="100"></label>
+                            <label>s1: <input type="number" name="s1" value="0"></label>
+                            <label>r2: <input type="number" name="r2" value="200"></label>
+                            <label>s2: <input type="number" name="s2" value="255"></label>
+                            <span data-fn="piecewiseLinear">Piecewise Linear</span>
                         </form>
                     </div>
                 </li>
@@ -125,7 +132,7 @@
                     <div class="group">Morphology</div>
                     <div class="options">
                         <form>
-                            <label>Structuring element: <input type="text" name="SE" value="[[0, 1, 0], [1, 1, 1], [0, 1, 0]]"></label>
+                            <label>Structuring element: <br><input type="text" name="SE" value="[[0, 1, 0], [1, 1, 1], [0, 1, 0]]"></label>
                             <span data-fn="erode">Erode</span>
                             <span data-fn="dilate">Dilate</span>
                             <span data-fn="open">Open</span>
@@ -138,13 +145,28 @@
                     <div class="options">
                         <form>
                             <label>Salt: <input type="number" name="salt" value="0">%</label>
-                            <label>Pepper: <input type="number" name="pepper" value="0">%</label><br>
+                            <label>Pepper: <input type="number" name="pepper" value="0">%</label>
                             <span data-fn="saltAndPepper">Salt & Pepper</span>
                         </form>
+                        <div class="divider"></div>
                         <form>
-                            <label>Mean: <input type="number" name="mean" value="0"></label>&nbsp;<br>
-                            <label>Standard Deviation: <input type="number" name="std" value="1"></label>&nbsp;<br>
+                            <label>Mean: <input type="number" name="mean" value="0"></label>
+                            <label>Standard Deviation: <input type="number" name="std" value="1"></label>
+                            <label>Scale: <input type="number" name="scale" value="1"></label>
                             <span data-fn="gaussian">Gaussian</span>
+                        </form>
+                        <div class="divider"></div>
+                        <form>
+                            <label>Lambda: <input type="number" name="lambda" value="1"></label>
+                            <label>Scale: <input type="number" name="scale" value="1"></label>
+                            <span data-fn="exponential">Exponential</span>
+                        </form>
+                        <div class="divider"></div>
+                        <form>
+                            <label>a: <input type="number" name="a" value="0"></label>
+                            <label>b: <input type="number" name="b" value="1"></label>
+                            <label>Scale: <input type="number" name="scale" value="1"></label>
+                            <span data-fn="uniform">Uniform</span>
                         </form>
                     </div>
                 </li>
@@ -153,20 +175,37 @@
                     <div class="options">
                         <form>
                             <input type="hidden" name="type" value="linear">
-                            <label>Levels: <input type="number" name="levels" value="2" min="1" max="30"></label>&nbsp;<br>
-                            <span data-fn="quantize">Quantize</span>
+                            <label>Levels: <input type="number" name="levels" value="2" min="1" max="30"></label>
+                            <span data-fn="quantize">Linear</span>
+                        </form>
+                        <div class="divider"></div>
+                        <form>
+                            <input type="hidden" name="type" value="custom">
+                            <label>b's: <input type="text" name="b's" value="[0, 128, 255]"></label>
+                            <label>q's: <input type="text" name="q's" value="[100, 200]"></label>
+                            <span data-fn="quantize">Custom</span>
+                        </form>
+                    </div>
+                </li>
+                <li>
+                    <div class="group">Sample</div>
+                    <div class="options">
+                        <form>
+                            <label>Period: <input type="number" name="period" value="2"></label>
+                            <span data-fn="sample">Sample</span>
                         </form>
                     </div>
                 </li>
             </ul>
+            <div id="helpContainer">
+                <span data-fn="help">Help</span>
+            </div>
         </section>
     </main>
     <footer>a html5 canvas experiment by Jordan Griege</footer>
     <script src="js/helper.js"></script>
     <script src="js/imCanvas.js"></script>
     <script src="js/imProcess.js"></script>
-    <!-- taken from https://github.com/wellflat/javascript-labs/blob/master/cv/fft/fft.js under MIT license -->
-    <script src="js/libs/fft.js"></script>
     <script src="js/ui.js"></script>
 </body>
 </html>

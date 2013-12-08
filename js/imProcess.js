@@ -65,6 +65,15 @@ var imProcess = {
         imCanvas.write(this.targetContext);
     },
 
+    // add exponential noise to the image
+    exponential:function(lambda, scale) {
+        imCanvas.read(this.sourceContext);
+        imCanvas.loopPixels(function(x, y, i) {
+            this.pixels[x][y] = Math.round(i + scale*(Math.log(1-Math.random())/-lambda));
+        });
+        imCanvas.write(this.targetContext);
+    },
+
     // apply the provided filter to the image
     filter:function(mask, scale, centerX, centerY) {
         // maybe change dimensions... depends on input form
@@ -82,7 +91,7 @@ var imProcess = {
             var sum = 0;
             for(var m = 0; m < height; m++) {
                 for(var n = 0; n < width; n++) {
-                    sum += z[x - centerX + n][y - centerY + m] * mask[n][m];
+                    sum += z[x + n][y + m] * mask[m][n];
                 };
             };
             pixels[x][y] = Math.round(sum*scale);
@@ -103,10 +112,10 @@ var imProcess = {
     // add gaussian noise based on given mu and sigma
     // the noise is approximated using 3 random numbers in [0,1]
     // formula credited to www.protonfish.com/random.shtml
-    gaussian:function(mu, sigma) {
+    gaussian:function(mu, sigma, scale) {
         imCanvas.read(this.sourceContext);
         imCanvas.loopPixels(function(x, y, i) {
-            this.pixels[x][y] = i + Math.round((2*(Math.random()+Math.random()+Math.random())-3) * sigma + mu);
+            this.pixels[x][y] = Math.round(i + scale*((2*(Math.random()+Math.random()+Math.random())-3) * sigma + mu));
         });
         imCanvas.write(this.targetContext);
     },
@@ -118,7 +127,6 @@ var imProcess = {
     },
 
     // create a plot of the intensity distribution in the stored 2d pixel array
-    // not finished yet
     histogram:function() {
         var scale,
             dist = new Array(256);
@@ -237,7 +245,7 @@ var imProcess = {
         this.erode(se);
     },
 
-    // apply a mean filter to the image
+    // apply a median filter to the image
     median:function(size) {
         var pixels,
             offset = Math.floor(size/2),
@@ -278,7 +286,6 @@ var imProcess = {
     },
 
     // apply piecewise linear transform
-    // not finished yet
     piecewiseLinear:function(r1, s1, r2, s2) {
         var m1 = s1/r1,
             m2 = (s2-s1)/(r2-r1),
@@ -317,14 +324,15 @@ var imProcess = {
             var lin = this.linearSpacing(arguments[1]),
                 b = lin.b,
                 q = lin.q;
+        } else {
+            b = JSON.parse(b);
+            q = JSON.parse(q);
         };
         for(var i = 0; i < 256; i++) {
-            // if i equals the next bound
-            if(b[j+1] === i) {
-                j++
-            };
             quantizer[i] = q[j];
+            if(b[j+1] === i) j++
         };
+
         imCanvas.read(this.sourceContext);
         imCanvas.loopPixels(function(x, y, i) {
             this.pixels[x][y] = quantizer[i];
@@ -332,6 +340,7 @@ var imProcess = {
         imCanvas.write(this.targetContext);
     },
 
+    // add salt and pepper noise to the image
     saltAndPepper:function(salt, pepper) {
         imCanvas.read(this.sourceContext);
         imCanvas.loopPixels(function(x, y, i) {
@@ -347,19 +356,20 @@ var imProcess = {
 
     // sample the image at the specified period
     // this will result in a smaller image (with less information)
+    // not finished yet
     sample:function(period) {
-        if(this.width % period !== 0 || this.height % period !== 0) {
-            return false;
-        };
-        var pixels = create2dPixelArray(this.width/period, this.height/period);
         imCanvas.read(this.sourceContext);
+        var width = Math.floor(imCanvas.width/period),
+            height = Math.floor(imCanvas.height/period),
+            pixels = imCanvas.create2dPixelArray(width, height);
         imCanvas.loopPixels(function(x, y, i) {
             if(x % period === 0 && y % period === 0) {
                 pixels[x/period][y/period] = i;
             };
         });
-        //this.pixels = pixels;
-        //this.setDimensions(this.width/period, this.height/period);
+        imCanvas.pixels = pixels;
+        imCanvas.width = width;
+        imCanvas.height = height;
         imCanvas.write(this.targetContext);
     },
 
@@ -372,8 +382,17 @@ var imProcess = {
         imCanvas.write(this.targetContext);
     },
 
+    // add uniform noise to the image
+    uniform:function(a, b, scale) {
+        var diff = b - a;
+        imCanvas.read(this.sourceContext);
+        imCanvas.loopPixels(function(x, y, i) {
+            this.pixels[x][y] = Math.round(i + scale*Math.random()*diff);
+        });
+        imCanvas.write(this.targetContext);
+    },
+
     // zero-pad the stored 2d pixel array
-    // not finished yet
     zeroPad:function(top, right, bottom, left) {
         var pixels = imCanvas.create2dPixelArray(imCanvas.width + right + left, imCanvas.height + top + bottom, 0);
 

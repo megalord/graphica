@@ -15,6 +15,7 @@ var imCanvas = {
                 width = this.width,
                 height = this.height;
         };
+        console.log(width, height);
         var arr = new Array(height),
             pixels = new Array(width);
         if(typeof i === 'number') for(var y = 0; y < height; y++) arr[y] = i;

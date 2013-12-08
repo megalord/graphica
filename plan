@@ -1,9 +1,0 @@
-(sampling)
-(*quantization)
-(piecewise linear)
-(addition/subraction)
-dft
-element mult
-fix header
-fix gaussian noise
-fix zero pad
